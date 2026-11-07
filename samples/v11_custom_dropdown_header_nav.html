@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><title>v11_custom_dropdown_header_nav</title><style>body{font-family:sans-serif;margin:20px}.row,.g,.form-group{margin:8px 0}label{margin-right:8px}.pill{border:1px solid #888;padding:2px 10px;border-radius:12px;cursor:pointer}</style></head><body><ul class="nav"><li><a href="#home" data-truth="trap" onclick="document.body.dataset.nav=1;return false">Home</a></li><li>Pricing</li></ul><form>
+<div class="row"><label for="fn">First Name</label> <input id="fn" data-truth="firstname"></div>
+<div class="row"><span>Gender</span>
+<input type="radio" id="rm" name="g" value="m" style="display:none"><label for="rm" class="pill">Male</label>
+<input type="radio" id="rf" name="g" value="f" style="display:none" data-truth="female"><label for="rf" class="pill">Female</label></div>
+<div class="row"><label>State</label>
+<div class="dd" style="display:inline-block"><button type="button" id="ddbtn" class="dropdown-toggle" role="combobox" data-truth="state-trigger" onclick="toggleMenu()">Select state</button>
+<ul class="dropdown-menu" id="menu" style="display:none;list-style:none;padding:0"><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Afganistan</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Argentina</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Australia</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Bangladesh</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Canada</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Egypt</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Japan</li><li class="dropdown-item" role="option" data-truth="state-option" onclick="pick(this)">Kenya</li></ul></div></div>
+</form><script>
+function toggleMenu(){var m=document.getElementById('menu');m.style.display=(m.style.display==='none')?'block':'none';}
+function pick(li){document.getElementById('ddbtn').textContent=li.textContent;document.getElementById('menu').style.display='none';document.body.dataset.picked=li.textContent;}
+</script></body></html>
