@@ -106,8 +106,6 @@ What I decided on, and what I know it does not do:
 
 ## AI use
 
-## AI use
-
 I designed the core architecture, the tiered ranking algorithm, and the test suite. To work efficiently, I leveraged Generative AI as a collaborative assistant—primarily as a sounding board to refine the scoring math and to help draft the JavaScript snippets needed for DOM metadata extraction. The critical engineering decisions, such as the global frame sweep, the custom-dropdown fallbacks, and the shift from additive scoring to rigid tiers, were driven by my own manual testing against edge cases. Because I drove the design and actively debugged the failures, I can confidently explain the technical rationale behind the code.
 
 ## Project layout
