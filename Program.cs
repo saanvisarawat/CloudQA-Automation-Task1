@@ -12,7 +12,7 @@ namespace CloudQATask1
     {
         static int Main(string[] args)
         {
-            string rawUrl = args.Length > 0 ? args[0] : "https://app.cloudqa.io/home/AutomationPracticeForm";
+            string rawUrl = args.Length > 0 ? args[0] : "https:
             string url = NormalizeUrl(rawUrl);
 
             string firstNameValue = args.Length > 1 ? args[1] : "Saanvi";
@@ -64,9 +64,9 @@ namespace CloudQATask1
         static string NormalizeUrl(string input)
         {
             string trimmed = input.Trim();
-            if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+            if (trimmed.StartsWith("http:
+                trimmed.StartsWith("https:
+                trimmed.StartsWith("file:
             {
                 return trimmed;
             }
@@ -76,7 +76,7 @@ namespace CloudQATask1
                 return new Uri(System.IO.Path.GetFullPath(trimmed)).AbsoluteUri;
             }
 
-            return "https://" + trimmed;
+            return "https:
         }
 
         static bool RunTest(string testName, Action testAction)
