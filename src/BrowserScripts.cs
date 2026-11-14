@@ -1,9 +1,9 @@
 namespace CloudQATask1
 {
-    // JavaScript that runs inside the page. Kept in one place so the C# files stay readable.
+
     public static class BrowserScripts
     {
-        // All elements matching a CSS selector, including ones inside open shadow roots.
+       
         public const string QuerySelectorAllWithShadow = @"
                 const selector = arguments[0];
                 const results = [];
@@ -20,7 +20,7 @@ namespace CloudQATask1
                 collect(document);
                 return results;";
 
-        // Short text such as <input id=fname name=fname type=text> for the log.
+        
         public const string DescribeElement = @"
                 const e = arguments[0];
                 let s = '<' + e.tagName.toLowerCase();
@@ -29,7 +29,7 @@ namespace CloudQATask1
                 }
                 return s + '>';";
 
-        // [labelTexts, isInShadowOrSlot] for a text box or dropdown. Only the NEAREST label counts.
+       
         public const string GetFieldMetadata = @"
                 const el = arguments[0];
                 const texts = [];
@@ -78,7 +78,7 @@ namespace CloudQATask1
 
                 return [texts, inShadowOrSlot];";
 
-        // [optionTexts, groupTexts, clickableLabel, isInShadowOrSlot] for a radio button.
+        
         public const string GetRadioMetadata = @"
                 const r = arguments[0];
                 const optTexts = [];

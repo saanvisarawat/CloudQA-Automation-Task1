@@ -7,7 +7,7 @@ using OpenQA.Selenium.Support.UI;
 
 namespace CloudQATask1
 {
-    // One located thing plus how well it matched. RunnerUp = rank of the second best candidate in the same page or frame.
+    
     public record Found<T>(T Item, int Rank, int RunnerUp) where T : class;
 
     public class RadioMatch
@@ -16,7 +16,7 @@ namespace CloudQATask1
         public IWebElement? Label { get; set; }
     }
 
-    // What the last test chose and why. Printed next to [PASS].
+    
     public static class Log
     {
         public static string? Last;
@@ -28,12 +28,7 @@ namespace CloudQATask1
         const int MaxFrameDepth = 3;
         static readonly TimeSpan SettleWindow = TimeSpan.FromSeconds(2);
 
-        // ------------------------------------------------------------------ ranking
-        // Rank = match * 1_000_000 + group * 100_000 + light * 10_000 + extras (< 1000).
-        //   match: 3 = exact label / option text, 2 = exact name / aria-label / placeholder / value, 1 = partial, 0 = not a candidate
-        //   group: radios only. 2 = group label is exactly the group name, 1 = contains it
-        //   light: 1 = normal page, 0 = inside a shadow root (only breaks ties)
-        // Each tier is worth more than everything below it, so a lower tier can never outvote a higher one.
+        
 
         static readonly Dictionary<string, string[]> Synonyms = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -60,7 +55,7 @@ namespace CloudQATask1
             return names;
         }
 
-        // Label or option text: 3 = exact phrase, 1 = phrase appears as whole words, 0 = no match.
+        
         static int TextLevel(string text, List<string> names)
         {
             int level = 0;
@@ -72,7 +67,7 @@ namespace CloudQATask1
             return level;
         }
 
-        // name / aria-label / placeholder: 2 = exact phrase, 1 = whole words, 0 = no match.
+        
         static int AttrLevel(string text, List<string> names)
         {
             int level = 0;
@@ -183,7 +178,7 @@ namespace CloudQATask1
             return Pack(match, group, inShadow ? 0 : 1, extras);
         }
 
-        // ------------------------------------------------------------------ finders (one page or frame at a time)
+        
 
         public static Found<IWebElement>? FindBestTextInput(IWebDriver driver, string labelText, string[] attributeHints)
         {
@@ -193,6 +188,7 @@ namespace CloudQATask1
             {
                 string type = input.GetAttribute("type") ?? "text";
                 if (BlockedInputTypes.Contains(type)) continue;
+                if (!string.IsNullOrEmpty(input.GetAttribute("readonly"))) continue;   
 
                 candidates.Add((ScoreField(driver, input, labelText, attributeHints), input));
             }
@@ -221,24 +217,18 @@ namespace CloudQATask1
         {
             string[] hints = { labelText.ToLowerInvariant() };
 
-            var selects = new List<(int Rank, IWebElement Item)>();
+          
+            var candidates = new List<(int Rank, IWebElement Item)>();
             foreach (var select in CollectElementsIncludingShadow(driver, "select").Where(IsInteractable))
-                selects.Add((ScoreField(driver, select, labelText, hints), select));
+                candidates.Add((ScoreField(driver, select, labelText, hints), select));
 
-            var best = Pick(selects);
-            if (best != null) return best;
-
-            var triggers = new List<(int Rank, IWebElement Item)>();
             foreach (var trigger in CollectElementsIncludingShadow(driver, "[role='combobox'], [role='listbox'], .dropdown-toggle").Where(IsInteractable))
-                triggers.Add((ScoreField(driver, trigger, labelText, hints), trigger));
+                candidates.Add((ScoreField(driver, trigger, labelText, hints), trigger));
 
-            return Pick(triggers);
+            return Pick(candidates);
         }
 
-        // ------------------------------------------------------------------ searching the page AND every frame
-
-        // Looks in the page and in every iframe (nested, and inside shadow roots), keeps the best candidate overall,
-        // then leaves the driver switched into the frame that contains it.
+        
         public static T LocateBest<T>(IWebDriver driver, WebDriverWait wait, string fieldName,
             Func<Found<T>?> finder, Func<T, IWebElement> asElement) where T : class
         {
@@ -261,11 +251,11 @@ namespace CloudQATask1
 
                     if (hits.Count == 0) return null;
 
-                    // OrderByDescending is stable, so an exact tie goes to the earlier page/frame in DOM order.
+                   
                     var ranked = hits.OrderByDescending(h => h.Rank).ToList();
                     var top = ranked[0];
 
-                    // Only weak evidence so far (no exact label): give the page a moment to finish rendering.
+                   
                     if (MatchOf(top.Rank) < 3)
                     {
                         weakSince ??= DateTime.UtcNow;
@@ -296,7 +286,7 @@ namespace CloudQATask1
             var hit = finder();
             if (hit != null)
             {
-                // Shallower frames win exact ties.
+                
                 hits.Add((hit.Rank + (3 - Math.Min(path.Count, 3)) * 1000, hit.RunnerUp, new List<int>(path)));
             }
 
@@ -325,7 +315,7 @@ namespace CloudQATask1
             }
         }
 
-        // ------------------------------------------------------------------ talking to the page
+        
 
         public static IReadOnlyList<IWebElement> CollectElementsIncludingShadow(IWebDriver driver, string cssSelector)
         {
@@ -366,13 +356,18 @@ namespace CloudQATask1
             }
         }
 
+        
+        static string Words(string text)
+        {
+            string t = Regex.Replace(text ?? string.Empty, @"([\p{Ll}\p{N}])(\p{Lu})", "$1 $2");
+            t = Regex.Replace(t, @"[^\p{L}\p{N}\s]|_", " ");
+            return Regex.Replace(t, @"\s+", " ").Trim();
+        }
+
         static bool HasExactPhrase(string input, string target)
         {
-            string cleanInput = Regex.Replace(input, @"[^\w\s]", " ");
-            cleanInput = Regex.Replace(cleanInput, @"\s+", " ").Trim();
-
-            string cleanTarget = Regex.Replace(target, @"[^\w\s]", " ");
-            cleanTarget = Regex.Replace(cleanTarget, @"\s+", " ").Trim();
+            string cleanInput = Words(input);
+            string cleanTarget = Words(target);
 
             return !string.IsNullOrEmpty(cleanInput) &&
                    string.Equals(cleanInput, cleanTarget, StringComparison.OrdinalIgnoreCase);
@@ -383,6 +378,7 @@ namespace CloudQATask1
             if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(targetWords))
                 return false;
 
+            input = Words(input);
             string pattern = @"\b" + string.Join(@"\s+", targetWords.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Regex.Escape)) + @"\b";
             return Regex.IsMatch(input, pattern, RegexOptions.IgnoreCase);
         }

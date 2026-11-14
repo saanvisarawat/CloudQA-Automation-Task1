@@ -12,7 +12,10 @@ namespace CloudQATask1
         // Set HEADLESS=1 to hide the browser window.
         static int Main(string[] args)
         {
-            string rawUrl = args.Length > 0 ? args[0] : "https://app.cloudqa.io/home/AutomationPracticeForm";
+            // Page URL: first argument, else the PAGE_URL environment variable, else the live CloudQA form.
+            string rawUrl = args.Length > 0 ? args[0]
+                : Environment.GetEnvironmentVariable("PAGE_URL") is { Length: > 0 } fromEnv ? fromEnv
+                : "https://app.cloudqa.io/home/AutomationPracticeForm";
             string url = NormalizeUrl(rawUrl);
 
             string firstNameValue = args.Length > 1 ? args[1] : "Saanvi";
@@ -28,7 +31,19 @@ namespace CloudQATask1
             int passed = 0;
             int failed = 0;
 
-            using IWebDriver driver = new ChromeDriver(options);
+            IWebDriver driver;
+            try
+            {
+                driver = new ChromeDriver(options);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] Could not start Chrome: {ex.Message}");
+                Console.Error.WriteLine("Check that Google Chrome is installed and that the machine can reach the internet (Selenium Manager downloads the matching driver).");
+                return 2;
+            }
+
+            using var driverScope = driver;
             var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
             wait.IgnoreExceptionTypes(typeof(StaleElementReferenceException));
 
@@ -76,6 +91,12 @@ namespace CloudQATask1
             if (System.IO.File.Exists(trimmed))
             {
                 return new Uri(System.IO.Path.GetFullPath(trimmed)).AbsoluteUri;
+            }
+
+            // A bare local address such as "localhost:3000/form" or "127.0.0.1:8080" is served over http, not https.
+            if (System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^(localhost|127\.0\.0\.1|\[::1\]|\d{1,3}(\.\d{1,3}){3})(:\d+)?(/|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                return "http://" + trimmed;
             }
 
             return "https://" + trimmed;
@@ -280,7 +301,16 @@ namespace CloudQATask1
             if (string.Equals(element.TagName, "input", StringComparison.OrdinalIgnoreCase))
                 return element.Selected;
 
-            return string.Equals(element.GetAttribute("aria-checked"), "true", StringComparison.OrdinalIgnoreCase);
+            foreach (string attr in new[] { "aria-checked", "aria-selected", "aria-pressed" })
+            {
+                if (string.Equals(element.GetAttribute(attr), "true", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            if (string.Equals(element.GetAttribute("data-state"), "checked", StringComparison.OrdinalIgnoreCase)) return true;
+
+            // Custom widgets with no ARIA state: fall back to the usual "selected" class names.
+            string cls = element.GetAttribute("class") ?? string.Empty;
+            return System.Text.RegularExpressions.Regex.IsMatch(cls, @"(^|[\s_-])(checked|selected|active)($|[\s_-])", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
 
         static void ScrollIntoView(IWebDriver driver, IWebElement element)
@@ -295,7 +325,9 @@ namespace CloudQATask1
         static bool IsUsableOption(IWebElement option)
         {
             string text = option.Text.Trim();
-            return option.Enabled && !string.IsNullOrWhiteSpace(text) && !IsPlaceholderText(text);
+            // <option value="">Pick a state</option> is a placeholder even if its wording is not one we know.
+            bool emptyValue = string.IsNullOrWhiteSpace(option.GetAttribute("value"));
+            return option.Enabled && !emptyValue && !string.IsNullOrWhiteSpace(text) && !IsPlaceholderText(text);
         }
 
         static bool IsPlaceholderText(string text)

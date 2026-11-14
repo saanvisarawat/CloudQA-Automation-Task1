@@ -25,6 +25,14 @@ dotnet run --project src
 # Any other URL (this is how the page URL is configurable)
 dotnet run --project src -- https://example.com/modified-form
 
+# A local server: a bare address such as localhost:3000/form is opened over http
+dotnet run --project src -- localhost:3000/form
+
+# Or set the URL once in an environment variable (used when no argument is given)
+set PAGE_URL=https://example.com/modified-form        (Windows cmd)
+$env:PAGE_URL = "https://example.com/modified-form"   (PowerShell)
+dotnet run --project src
+
 # A local copy of the page
 dotnet run --project src -- samples\v00_baseline.html
 
@@ -52,7 +60,7 @@ The exit code is `0` when all three tests pass and `1` otherwise, so the program
 
 ## How it works
 
-1. **Collect candidates.** A small JavaScript snippet gathers every `input`, `select` or radio on the page, including ones inside open shadow DOM. Hidden and disabled elements are ignored.
+1. **Collect candidates.** A small JavaScript snippet gathers every `input`, `select` or radio on the page, including ones inside open shadow DOM. Hidden, disabled and read-only elements are ignored.
 2. **Read the evidence for each one.** The nearest label (via `for=`, a wrapping label, `aria-labelledby`, or the closest label-like element before it), plus its `name`, `aria-label`, `placeholder` and, for radios, the group label.
 3. **Rank them in tiers.** The score is built so that a higher tier always beats a lower one, however much the lower tier adds up to:
 
@@ -68,7 +76,9 @@ The exit code is `0` when all three tests pass and `1` otherwise, so the program
 5. **Wait for the page.** If the best match is weak (no exact label), it keeps checking for up to 2 seconds in case the real form is still rendering. Overall each field waits up to 10 seconds.
 6. **Check the result.** The text box value is read back. The radio must actually be checked. A native dropdown must show the chosen option. For a custom dropdown, only options that appear *after* the click are considered, and the trigger must show the chosen text afterwards. If it cannot be verified, the test fails instead of passing.
 
-Common wording differences are handled with a small synonym list (for example "Given Name", "Forename", "Province", "Region", "Sex").
+Common wording differences are handled with a small synonym list (for example "Given Name", "Forename", "Province", "Region", "Sex"). Attribute values written in code style are compared as words, so `first_name`, `first-name` and `firstName` all count as "first name".
+
+Native `<select>` elements and custom dropdown triggers are ranked together, so a look-alike `<select>` (for example "State of Birth") cannot beat a custom dropdown whose label is exactly "State". An `<option value="">` placeholder such as "Pick a state" is never chosen as a real value. A custom radio counts as checked when it has `aria-checked`, `aria-selected` or `aria-pressed` set to true, `data-state="checked"`, or a `checked` / `selected` / `active` class.
 
 ## Testing
 
@@ -87,8 +97,9 @@ The suite builds once, runs every page, and prints one PASS/FAIL row per page. T
 - hidden radios with styled labels, ARIA radios, and a custom dropdown with a navigation menu on the page
 - the form inside an iframe, a nested iframe, an iframe inside shadow DOM, and the form inside shadow DOM
 - a form that renders a few seconds after load, and a decoy that appears before the real field
+- code-style attribute names with no labels (`first_name`, `firstName`), a read-only look-alike field, a dropdown whose placeholder is not one of the usual wordings, and a custom radio that only changes a CSS class
 
-Result at the time of writing: all pages in the suite pass. Live CloudQA page: **[fill in after running: pass / what it picked]**.
+Result at the time of writing: all pages in the suite pass. To run against the live CloudQA page, use `dotnet run --project src` with no arguments (the live page is the default URL); the output lists the element chosen for each field, as shown under "Reading the output".
 
 ## Approach and limitations
 
@@ -98,7 +109,7 @@ What I decided on, and what I know it does not do:
 - **Label wording.** A label that is far from the field's name and not in the synonym list (for example "Region of residence" for State) will not be found.
 - **Closed shadow DOM** cannot be read by any script, so those fields are not found.
 - **Frame depth** is limited to 3 levels.
-- **Custom widgets** are supported only in common forms: `role="radio"` radios, and dropdowns marked `role="combobox"`, `role="listbox"` or `.dropdown-toggle` whose options appear in the page after a click.
+- **Custom widgets** are supported only in common forms: `role="radio"` radios (or radios that show their state with a `checked` / `selected` / `active` class), and dropdowns marked `role="combobox"`, `role="listbox"` or `.dropdown-toggle` whose options appear in the page after a click.
 - **Ties** between two equally good candidates go to the one earlier in the page (and in the shallower frame). The log marks this as `AMBIGUOUS`.
 - **Weak matches take longer.** If a field only matches by `placeholder` or `aria-label`, the program waits 2 seconds before accepting it.
 - **Value fallback.** If the requested State is not offered, it picks the first real option rather than failing, and logs it. If you would prefer a hard failure here, that is a one-line change in `Program.cs`.
@@ -118,5 +129,5 @@ src/
   CloudQATask1.csproj
 samples/
   RunSuite.ps1        runs every sample page
-  *.html              test pages
+  *.html              test pages (v00 to v28)
 ```
